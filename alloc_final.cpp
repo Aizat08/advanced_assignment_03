@@ -15,8 +15,8 @@ struct allocator {
 
     allocator() noexcept {
         offset = 0;
-        PoolSize = N * sizeof(T);
-        ptr = ::operator new(PoolSize); } 
+        PoolSize = N;
+        ptr = ::operator new(PoolSize * sizeof(T)); } 
 
     ~allocator() {::operator delete(ptr);}
 
@@ -25,7 +25,7 @@ struct allocator {
 
     T* allocate(std::size_t n) {
         
-        std::size_t requiredSize = n * sizeof(T);
+        std::size_t requiredSize = n;
 
         if(requiredSize > PoolSize - offset){
             throw std::bad_alloc(); }
@@ -39,20 +39,23 @@ struct allocator {
 
     void deallocate (T* p, std::size_t n){}
 
-    template<typename Up, typename... Args>
-    void construct(Up* p, Args&&... args){
-        ::new ((void*)p) Up(std::forward<Args>(args)...);
-    }
-
-    void destroy(T* p){
-        p->~T(); 
-    }
-
     template<typename U>
     struct rebind {
         typedef allocator<U, N> other;
     };
 }; 
+
+template <class T, class U, size_t N>
+constexpr bool operator== (const allocator<T, N>& a1, const allocator<U, N>& a2) noexcept
+{
+    return a1.ptr == a2.ptr;
+} 
+
+template <class T, class U, size_t N>
+constexpr bool operator!= (const allocator<T, N>& a1, const allocator<U, N>& a2) noexcept
+{
+    return a1.ptr != a2.ptr;
+} 
 
 template<typename T, typename Allocator=std::allocator<T>>
 class List{
@@ -69,7 +72,7 @@ class List{
     void push_back(const T& value){
 
         Node* node = nodeAlloc.allocate(1);
-        nodeAlloc.construct(node, value);
+        std::allocator_traits<NodeAlloc>::construct(nodeAlloc, node, value);
         if(size==0){head = tail = node;}
         else{
             tail->next = node;
@@ -91,7 +94,7 @@ class List{
         Node* current_node = head;
         while(current_node != nullptr){
             Node* next = current_node->next;
-            nodeAlloc.destroy(current_node);
+            std::allocator_traits<NodeAlloc>::destroy(nodeAlloc, current_node);
             nodeAlloc.deallocate(current_node, 1); 
             current_node = next; }
 
@@ -104,6 +107,7 @@ class List{
     Node* head;
     Node* tail;
     std::size_t size;
+    using NodeAlloc = typename Allocator::template rebind<Node>::other;
     typename Allocator::template rebind<Node>::other nodeAlloc;
 };
 
