@@ -1,2 +1,1 @@
-Homework #3 from OTUS School. Task: create custom allocator to work with the memory. The allocator must be parametrized with the fixed number of elements. Otherwise, it will throw exception.
-This custom allocator should work with both STL and custom containers. 
+Assignment #3. Need to create the memory pool which will be parametrized with the fixed size of elements. An attempt to pick more elements will lead to bad_alloc(). There are two different types of realizations of this program: the one with plain pointer the other is with std::shared_ptr. 
